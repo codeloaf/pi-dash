@@ -1,4 +1,5 @@
 venv/
-
 README.md
-config.json
+.github/
+Dockerfile
+.gitignore
