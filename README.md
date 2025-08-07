@@ -32,7 +32,7 @@ Before running the application, you need to configure the following two files:
 
 This file manages your Pi-hole instances. Open it and edit the following for each Pi-hole:
 *   `name`: A custom name for your Pi-hole (e.g., "Primary").
-*   `address`: The full URL to your Pi-hole (e.g., "http://192.168.1.10").
+*   `address`: The full URL to your Pi-hole (e.g., "http://pi.hole").
 *   `password`: Your Pi-hole API token/password.
 *   `enabled`: Set to `true` to display the Pi-hole on the dashboard, or `false` to hide it.
 
