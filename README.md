@@ -11,7 +11,10 @@ Pi-Dash is a simple, lightweight dashboard for monitoring multiple Pi-hole insta
 *   **Lightweight and Fast:** Built with Flask and vanilla JavaScript, Pi-Dash is fast and has minimal dependencies.
 *   **Dark Mode:** Automatically switches theme based on your system preferences.
 
+![pi-dash-landscape](https://github.com/user-attachments/assets/a0e1fbef-279a-40df-9424-0cad50c31b50)
+
 ## Installation
+
 
 1.  **Clone the repository:**
     ```bash
