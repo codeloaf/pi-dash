@@ -53,7 +53,7 @@ Then, open your web browser and navigate to `http://localhost:5001`.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details. If you fork this project, please consider updating the copyright notice in the `LICENSE` file.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
 ## Contributing
 
