@@ -4,48 +4,95 @@ Pi-Dash is a simple, lightweight dashboard for monitoring multiple Pi-hole insta
 
 ## Features
 
-*   **Multiple Pi-hole Support:** Monitor all your Pi-hole instances from a single dashboard.
-*   **Dynamic Configuration:** Easily add, remove, or disable Pi-holes through a simple `config.json` file.
-*   **Responsive Design:** The layout works on both desktop and mobile devices, stacking cards vertically on smaller screens.
-*   **Real-time Statistics:** The dashboard automatically refreshes every second.
-*   **Lightweight and Fast:** Built with Flask and vanilla JavaScript, Pi-Dash is fast and has minimal dependencies.
-*   **Dark Mode:** Automatically switches theme based on your system preferences.
+- **Multiple Pi-hole Support:** Monitor all your Pi-hole instances from a single dashboard.
+- **Dynamic Configuration:** Easily add, remove, or disable Pi-holes through a simple `config.json` file.
+- **Responsive Design:** The layout works on both desktop and mobile devices, stacking cards vertically on smaller screens.
+- **Real-time Statistics:** The dashboard automatically refreshes every second.
+- **Lightweight and Fast:** Built with Flask and vanilla JavaScript, Pi-Dash is fast and has minimal dependencies.
+- **Dark Mode:** Automatically switches theme based on your system preferences.
 
 ![pi-dash-landscape](https://github.com/user-attachments/assets/a0e1fbef-279a-40df-9424-0cad50c31b50)
 
 ## Configuration
 
-Before running the application, you need to configure the following two files:
+Before running the application, you need to create and configure the following files:
 
-**1. `config.json`**
+### 1. `config.json`
 
-This file manages your Pi-hole instances. Open it and edit the following for each Pi-hole:
-*   `name`: A custom name for your Pi-hole (e.g., "Primary").
-*   `address`: The full URL to your Pi-hole (e.g., "http://pi.hole").
-*   `password`: Your Pi-hole API token/password.
-*   `enabled`: Set to `true` to display the Pi-hole on the dashboard, or `false` to hide it.
+This file manages your Pi-hole instances and dashboard settings. Example:
 
-**2. `manifest.json`** (Optional)
+```json
+{
+  "refresh_interval": 1000,
+  "piholes": [
+    {
+      "name": "Primary",
+      "address": "https://pi.hole/one",
+      "password": "your_app_password_here",
+      "enabled": true
+    },
+    {
+      "name": "Secondary",
+      "address": "https://pi.hole/two",
+      "password": "your_app_password_here",
+      "enabled": true
+    }
+  ]
+}
+```
 
-This file is for the Progressive Web App (PWA) icon. 
-*   Open `manifest.json` and replace the placeholder URL in the `src` field with a direct link to an icon file. Many users use the logo from their own Pi-hole admin page (e.g., `http://pi.hole/admin/img/logo.svg`).
+- **refresh_interval**: (optional) How often the dashboard updates, in milliseconds (e.g., 1000 = 1 second).
+- **piholes**: List of Pi-hole instances.
+  - **name**: Display name for your Pi-hole (e.g., "Primary").
+  - **address**: Full URL to your Pi-hole (e.g., "http://pi.hole").
+  - **password**: Your Pi-hole API token/password.
+  - **enabled**: Set to `true` to display the Pi-hole on the dashboard, or `false` to hide it.
+
+### 2. `manifest.json` (Optional)
+
+This file is for Progressive Web App (PWA) settings and icon. Example:
+
+```json
+{
+  "name": "Pi-Dash",
+  "short_name": "Pi-Dash",
+  "description": "A simple dashboard to monitor Pi-hole status.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#06b6d4",
+  "icons": [
+    {
+      "src": "https://pi.hole/admin/img/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+```
+
+- **icons.src**: Replace with a direct link to your Pi-hole logo or preferred icon.
+
+---
 
 ## Installation
 
 ### Docker
+
 1. **Docker Compose**
    ```yaml
    services:
-       pi-dash:
-           image: ghcr.io/codeloaf/pi-dash:main
-           container_name: pi-dash
-           ports:
-             - 5001:5001
-           volumes:
-             - /path/to/pi-dash/config.json:/app/config.json
-             - /path/to/pi-dash/manifest.json:/app/manifest.json # If you wish to edit the current manifest
+     pi-dash:
+       image: ghcr.io/codeloaf/pi-dash:main
+       container_name: pi-dash
+       ports:
+         - 5001:5001
+       volumes:
+         - ./config.json:/app/config.json
+         - ./manifest.json:/app/manifest.json
+         # Assumes config.json and manifest.json are in the same folder as your compose.yml file
    ```
-3. **Docker Run**
+2. **Docker Run**
    ```bash
    docker run -d \
     --name=pi-dash \
@@ -56,22 +103,25 @@ This file is for the Progressive Web App (PWA) icon.
    ```
 
 ### Native Install
+
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/codeloaf/pi-dash.git
     cd pi-dash
     ```
 
 2.  **Install the dependencies:**
+
     ```bash
     pip install -r requirements.txt
     ```
 
-3. **Start the app:**
-   To start the application, run the following command from the project's root directory:
-   ```bash
-   python proxy.py
-   ```
+3.  **Start the app:**
+    To start the application, run the following command from the project's root directory:
+    ```bash
+    python proxy.py
+    ```
 
 Then, open your web browser and navigate to `http://localhost:5001`.
 
