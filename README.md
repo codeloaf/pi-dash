@@ -83,7 +83,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
    ```yaml
    services:
      pi-dash:
-       image: ghcr.io/codeloaf/pi-dash:main
+       image: ghcr.io/surajverma/pi-dash:main
        container_name: pi-dash
        ports:
          - 5001:5001
@@ -107,7 +107,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/codeloaf/pi-dash.git
+    git clone https://github.com/surajverma/pi-dash.git
     cd pi-dash
     ```
 
