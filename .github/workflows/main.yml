@@ -1,8 +1,10 @@
-name: CI/CD
 
+name: CI/CD
 on:
+
   push:
     branches: [main]
+    tags: ['v*'] 
     paths-ignore:
       - '**/README.md'
   pull_request:
@@ -10,7 +12,6 @@ on:
     types: [opened, synchronize, reopened]
     paths-ignore:
       - '**/README.md'
-
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io # Github Container Repo
@@ -46,6 +47,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
 
       # Set up QEMU for multi-platform builds
       - name: Set up QEMU
