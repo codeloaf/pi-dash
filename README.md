@@ -106,7 +106,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
     -p 5001:5001 \
     -v /path/to/pi-dash/config.json:/app/config.json \
     -v /path/to/pi-dash/manifest.json:/app/manifest.json \ # If you wish to edit the current manifest
-  ghcr.io/codeloaf/pi-dash:latest
+  ghcr.io/surajverma/pi-dash:latest
    ```
 
 ### Native Install
