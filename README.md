@@ -90,7 +90,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
    ```yaml
    services:
      pi-dash:
-  image: ghcr.io/surajverma/pi-dash:latest
+       image: ghcr.io/surajverma/pi-dash:latest
        container_name: pi-dash
        ports:
          - 5001:5001
