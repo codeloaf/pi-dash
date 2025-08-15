@@ -4,7 +4,7 @@ Pi-Dash is a simple, lightweight dashboard for monitoring multiple Pi-hole insta
 
 ## Features
 
-- **Multiple Pi-hole Support:** Monitor all your Pi-hole instances from a single dashboard.
+- **Multiple Pi-hole Support:** Monitor all your Pi-hole instances from a single dashboard. You can add as many as Pi-hole's you want.
 - **Dynamic Configuration:** Easily add, remove, or disable Pi-holes through a simple `config.json` file.
 - **Responsive Design:** The layout works on both desktop and mobile devices, stacking cards vertically on smaller screens.
 - **Real-time Statistics:** The dashboard automatically refreshes every second.
@@ -127,7 +127,7 @@ Then, open your web browser and navigate to `http://localhost:5001`.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
