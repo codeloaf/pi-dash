@@ -1,3 +1,7 @@
+
+![Build Status](https://github.com/surajverma/pi-dash/actions/workflows/main.yml/badge.svg?branch=main)
+![Latest Release](https://img.shields.io/github/v/release/surajverma/pi-dash?include_prereleases)
+
 # Pi-Dash: A Minimalist Pi-hole Dashboard
 
 Pi-Dash is a simple, lightweight dashboard for monitoring multiple Pi-hole instances. It provides a clean, at-a-glance, responsive view of your Pi-hole statistics.
@@ -83,7 +87,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
    ```yaml
    services:
      pi-dash:
-       image: ghcr.io/surajverma/pi-dash:main
+  image: ghcr.io/surajverma/pi-dash:latest
        container_name: pi-dash
        ports:
          - 5001:5001
@@ -99,7 +103,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
     -p 5001:5001 \
     -v /path/to/pi-dash/config.json:/app/config.json \
     -v /path/to/pi-dash/manifest.json:/app/manifest.json \ # If you wish to edit the current manifest
-    ghcr.io/codeloaf/pi-dash:main
+  ghcr.io/codeloaf/pi-dash:latest
    ```
 
 ### Native Install
