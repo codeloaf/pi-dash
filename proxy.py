@@ -71,7 +71,7 @@ def index():
         icon_url = manifest_data['icons'][0].get('src', '')
     
     # Securely inject base href and icon URL
-    base_tag = f'<base href="{escape(html_base)}">' # Note: escaped newline to match corrected_old_string format
+    base_tag = f'<base href="{escape(html_base)}">' # Inject base tag with escaped HTML to prevent XSS
     temp_html = index_template.replace('<head>', f'<head>\n    {base_tag}')
     final_html = temp_html.replace('{{ICON_URL}}', escape(icon_url))
     
