@@ -1,4 +1,3 @@
-![Build Status](https://github.com/surajverma/pi-dash/actions/workflows/main.yml/badge.svg?branch=main)
 [![CI/CD](https://github.com/surajverma/pi-dash/actions/workflows/main.yml/badge.svg)](https://github.com/surajverma/pi-dash/actions/workflows/main.yml)
 ![Latest Release](https://img.shields.io/github/v/release/surajverma/pi-dash?include_prereleases)
 [![GitHub last commit](https://img.shields.io/github/last-commit/surajverma/pi-dash)](https://github.com/surajverma/pi-dash/commits/main)
