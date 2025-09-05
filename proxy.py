@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, Blueprint
 import requests
 from flask_cors import CORS
 import os
@@ -11,6 +11,20 @@ APP_ROOT = os.path.dirname(os.path.realpath(__file__))
 
 with open(os.path.join(APP_ROOT, 'config.json')) as f:
     config = json.load(f)
+
+base_path_config = config.get('base_path', '/')
+
+# for url_prefix, no trailing slash
+url_prefix = base_path_config
+if url_prefix != '/' and url_prefix.endswith('/'):
+    url_prefix = url_prefix[:-1]
+
+# for <base href>, needs trailing slash
+html_base = base_path_config
+if not html_base.endswith('/'):
+    html_base += '/'
+
+bp = Blueprint('pi-dash', __name__)
 
 pihole_sessions = {}
 
@@ -38,31 +52,51 @@ def authenticate_and_get_sid(address, password):
         print(f"A network error occurred during authentication with {address}: {e}")
         return None
 
-@app.route('/')
+@bp.route('/')
 def index():
-    return send_from_directory(APP_ROOT, 'index.html')
+    with open(os.path.join(APP_ROOT, 'index.html')) as f:
+        index_content = f.read()
+    with open(os.path.join(APP_ROOT, 'manifest.json')) as f:
+        manifest = json.load(f)
+    
+    icon_url = ''
+    if manifest.get('icons'):
+        icon_url = manifest['icons'][0].get('src', '')
 
-@app.route('/manifest.json')
+    # Inject base href and icon URL
+    head_replacement = f'<head>\n    <base href="{html_base}">' # Note: escaped newline to match corrected_old_string format
+    index_content = index_content.replace('<head>', head_replacement)
+    index_content = index_content.replace('{{ICON_URL}}', icon_url)
+    
+    return index_content
+
+@bp.route('/manifest.json')
 def serve_manifest():
-    return send_from_directory(APP_ROOT, 'manifest.json')
+    with open(os.path.join(APP_ROOT, 'manifest.json')) as f:
+        manifest = json.load(f)
+    manifest['start_url'] = html_base
+    return jsonify(manifest)
 
-@app.route('/sw.js')
+@bp.route('/sw.js')
 def serve_sw():
-    return send_from_directory(APP_ROOT, 'sw.js', mimetype='application/javascript')
+    with open(os.path.join(APP_ROOT, 'sw.js')) as f:
+        sw_content = f.read()
+    sw_content = sw_content.replace("urlsToCache = ['/']", f"urlsToCache = ['{html_base}']")
+    return sw_content, 200, {'Content-Type': 'application/javascript'}
 
-@app.route('/css/<path:path>')
+@bp.route('/css/<path:path>')
 def send_css(path):
     return send_from_directory(os.path.join(APP_ROOT, 'css'), path)
 
-@app.route('/js/<path:path>')
+@bp.route('/js/<path:path>')
 def send_js(path):
     return send_from_directory(os.path.join(APP_ROOT, 'js'), path)
 
-@app.route('/favicon.ico')
+@bp.route('/favicon.ico')
 def favicon():
     return '', 204
 
-@app.route('/config')
+@bp.route('/config')
 def get_config():
     return jsonify(config)
 
@@ -71,7 +105,7 @@ def get_pihole_data(address, sid):
     headers = {'X-FTL-SID': sid}
     return requests.get(url, headers=headers, timeout=10, verify=False)
 
-@app.route('/proxy')
+@bp.route('/proxy')
 def proxy():
     pihole_name = request.args.get('name')
     if not pihole_name:
@@ -105,6 +139,8 @@ def proxy():
         return jsonify(response.json())
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
+
+app.register_blueprint(bp, url_prefix=url_prefix)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)

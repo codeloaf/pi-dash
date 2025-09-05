@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const domainsEl = section.querySelector('.pihole-domains');
 
     try {
-      const rawData = await fetchData(`/proxy?name=${pihole.name}`);
+      const rawData = await fetchData(`proxy?name=${pihole.name}`);
       if (rawData.error) throw new Error(rawData.error);
 
       const stats = processSummaryData(rawData);
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function refreshDashboard() {
-    const config = await fetch('/config').then((res) => res.json());
+    const config = await fetch('config').then((res) => res.json());
     const enabledPiholes = config.piholes.filter((p) => p.enabled);
     enabledPiholes.forEach((pihole) => updatePiholeUI(pihole));
     updateTimestamp();
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startTimer() {
     if (refreshIntervalId) return;
-    fetch('/config')
+    fetch('config')
       .then((res) => res.json())
       .then((config) => {
         const interval = config.refresh_interval || 1000;
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function init() {
-    const config = await fetch('/config').then((res) => res.json());
+    const config = await fetch('config').then((res) => res.json());
     const mainContent = document.querySelector('main');
     mainContent.innerHTML = '';
 
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then(
+      navigator.serviceWorker.register('sw.js').then(
         (registration) => {
           console.log('ServiceWorker registration successful with scope: ', registration.scope);
         },
