@@ -1,5 +1,9 @@
 ![Build Status](https://github.com/surajverma/pi-dash/actions/workflows/main.yml/badge.svg?branch=main)
+[![CI/CD](https://github.com/surajverma/pi-dash/actions/workflows/main.yml/badge.svg)](https://github.com/surajverma/pi-dash/actions/workflows/main.yml)
 ![Latest Release](https://img.shields.io/github/v/release/surajverma/pi-dash?include_prereleases)
+[![GitHub last commit](https://img.shields.io/github/last-commit/surajverma/pi-dash)](https://github.com/surajverma/pi-dash/commits/main)
+[![GitHub issues](https://img.shields.io/github/issues/surajverma/pi-dash)](https://github.com/surajverma/pi-dash/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/surajverma/pi-dash?style=social)](https://github.com/surajverma/pi-dash/stargazers)
 
 # Pi-Dash: A Minimalist Pi-hole Dashboard
 
@@ -88,7 +92,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
    ```yaml
    services:
      pi-dash:
-  image: ghcr.io/surajverma/pi-dash:latest
+       image: ghcr.io/surajverma/pi-dash:latest
        container_name: pi-dash
        ports:
          - 5001:5001
@@ -104,7 +108,7 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
     -p 5001:5001 \
     -v /path/to/pi-dash/config.json:/app/config.json \
     -v /path/to/pi-dash/manifest.json:/app/manifest.json \ # If you wish to edit the current manifest
-  ghcr.io/codeloaf/pi-dash:latest
+    ghcr.io/surajverma/pi-dash:latest
    ```
 
 ### Native Install
