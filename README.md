@@ -1,4 +1,3 @@
-
 ![Build Status](https://github.com/surajverma/pi-dash/actions/workflows/main.yml/badge.svg?branch=main)
 ![Latest Release](https://img.shields.io/github/v/release/surajverma/pi-dash?include_prereleases)
 
@@ -27,6 +26,7 @@ This file manages your Pi-hole instances and dashboard settings. Example:
 
 ```json
 {
+  "base_path": "/",
   "refresh_interval": 1000,
   "piholes": [
     {
@@ -45,6 +45,7 @@ This file manages your Pi-hole instances and dashboard settings. Example:
 }
 ```
 
+- **base_path**: (optional) The subpath where the application is hosted (e.g., `/pi-dash/`). Defaults to `/`.
 - **refresh_interval**: (optional) How often the dashboard updates, in milliseconds (e.g., 1000 = 1 second).
 - **piholes**: List of Pi-hole instances.
   - **name**: Display name for your Pi-hole (e.g., "Primary").
@@ -128,6 +129,10 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
     ```
 
 Then, open your web browser and navigate to `http://localhost:5001`.
+
+## Disclaimer
+
+This project is not associated with the official [Pi-hole](https://pi-hole.net/) project. Pi-hole is a registered trademark of Pi-hole LLC.
 
 ## License
 
