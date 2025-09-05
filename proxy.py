@@ -1,4 +1,5 @@
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, Blueprint
+from markupsafe import escape
 import requests
 from flask_cors import CORS
 import os
@@ -7,13 +8,36 @@ import json
 app = Flask(__name__)
 CORS(app)
 
+# -- App Setup & Configuration --
 APP_ROOT = os.path.dirname(os.path.realpath(__file__))
 
+# Load configurations
 with open(os.path.join(APP_ROOT, 'config.json')) as f:
     config = json.load(f)
 
+with open(os.path.join(APP_ROOT, 'manifest.json')) as f:
+    manifest_data = json.load(f)
+
+with open(os.path.join(APP_ROOT, 'index.html')) as f:
+    index_template = f.read()
+
+with open(os.path.join(APP_ROOT, 'sw.js')) as f:
+    sw_template = f.read()
+
+# Prepare path variables
+base_path_config = config.get('base_path', '/')
+url_prefix = base_path_config
+if url_prefix != '/' and url_prefix.endswith('/'):
+    url_prefix = url_prefix[:-1]
+
+html_base = base_path_config
+if not html_base.endswith('/'):
+    html_base += '/'
+
+bp = Blueprint('pi-dash', __name__)
 pihole_sessions = {}
 
+# -- Pi-hole Authentication --
 def authenticate_and_get_sid(address, password):
     auth_url = f"{address}/api/auth"
     payload = {"password": password}
@@ -38,31 +62,48 @@ def authenticate_and_get_sid(address, password):
         print(f"A network error occurred during authentication with {address}: {e}")
         return None
 
-@app.route('/')
+# -- Frontend Routes --
+@bp.route('/')
 def index():
-    return send_from_directory(APP_ROOT, 'index.html')
+    # Use cached templates and inject dynamic data
+    icon_url = ''
+    if manifest_data.get('icons'):
+        icon_url = manifest_data['icons'][0].get('src', '')
+    
+    # Securely inject base href and icon URL
+    base_tag = f'<base href="{escape(html_base)}">' # Inject base tag with escaped HTML to prevent XSS
+    temp_html = index_template.replace('<head>', f'<head>\n    {base_tag}')
+    final_html = temp_html.replace('{{ICON_URL}}', escape(icon_url))
+    
+    return final_html
 
-@app.route('/manifest.json')
+@bp.route('/manifest.json')
 def serve_manifest():
-    return send_from_directory(APP_ROOT, 'manifest.json')
+    # Use cached manifest and update start_url
+    manifest_copy = manifest_data.copy()
+    manifest_copy['start_url'] = html_base
+    return jsonify(manifest_copy)
 
-@app.route('/sw.js')
+@bp.route('/sw.js')
 def serve_sw():
-    return send_from_directory(APP_ROOT, 'sw.js', mimetype='application/javascript')
+    # Use cached service worker and inject cache URL
+    sw_content = sw_template.replace('{{CACHE_URL}}', html_base)
+    return sw_content, 200, {'Content-Type': 'application/javascript'}
 
-@app.route('/css/<path:path>')
+@bp.route('/css/<path:path>')
 def send_css(path):
     return send_from_directory(os.path.join(APP_ROOT, 'css'), path)
 
-@app.route('/js/<path:path>')
+@bp.route('/js/<path:path>')
 def send_js(path):
     return send_from_directory(os.path.join(APP_ROOT, 'js'), path)
 
-@app.route('/favicon.ico')
+@bp.route('/favicon.ico')
 def favicon():
     return '', 204
 
-@app.route('/config')
+# -- API Routes --
+@bp.route('/config')
 def get_config():
     return jsonify(config)
 
@@ -71,7 +112,7 @@ def get_pihole_data(address, sid):
     headers = {'X-FTL-SID': sid}
     return requests.get(url, headers=headers, timeout=10, verify=False)
 
-@app.route('/proxy')
+@bp.route('/proxy')
 def proxy():
     pihole_name = request.args.get('name')
     if not pihole_name:
@@ -105,6 +146,9 @@ def proxy():
         return jsonify(response.json())
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
+
+# -- App Initialization --
+app.register_blueprint(bp, url_prefix=url_prefix)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)

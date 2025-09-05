@@ -1,0 +1,18 @@
+{
+  "base_path": "/",
+  "refresh_interval": 1000,
+  "piholes": [
+    {
+      "name": "Primary",
+      "address": "https://pi.hole/one",
+      "password": "your_app_password_here",
+      "enabled": true
+    },
+    {
+      "name": "Secondary",
+      "address": "https://pi.hole/two",
+      "password": "your_app_password_here",
+      "enabled": true
+    }
+  ]
+}
