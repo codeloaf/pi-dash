@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, send_from_directory, request, Blueprint
+from markupsafe import escape
 import requests
 from flask_cors import CORS
 import os
@@ -7,27 +8,36 @@ import json
 app = Flask(__name__)
 CORS(app)
 
+# -- App Setup & Configuration --
 APP_ROOT = os.path.dirname(os.path.realpath(__file__))
 
+# Load configurations
 with open(os.path.join(APP_ROOT, 'config.json')) as f:
     config = json.load(f)
 
-base_path_config = config.get('base_path', '/')
+with open(os.path.join(APP_ROOT, 'manifest.json')) as f:
+    manifest_data = json.load(f)
 
-# for url_prefix, no trailing slash
+with open(os.path.join(APP_ROOT, 'index.html')) as f:
+    index_template = f.read()
+
+with open(os.path.join(APP_ROOT, 'sw.js')) as f:
+    sw_template = f.read()
+
+# Prepare path variables
+base_path_config = config.get('base_path', '/')
 url_prefix = base_path_config
 if url_prefix != '/' and url_prefix.endswith('/'):
     url_prefix = url_prefix[:-1]
 
-# for <base href>, needs trailing slash
 html_base = base_path_config
 if not html_base.endswith('/'):
     html_base += '/'
 
 bp = Blueprint('pi-dash', __name__)
-
 pihole_sessions = {}
 
+# -- Pi-hole Authentication --
 def authenticate_and_get_sid(address, password):
     auth_url = f"{address}/api/auth"
     payload = {"password": password}
@@ -52,36 +62,32 @@ def authenticate_and_get_sid(address, password):
         print(f"A network error occurred during authentication with {address}: {e}")
         return None
 
+# -- Frontend Routes --
 @bp.route('/')
 def index():
-    with open(os.path.join(APP_ROOT, 'index.html')) as f:
-        index_content = f.read()
-    with open(os.path.join(APP_ROOT, 'manifest.json')) as f:
-        manifest = json.load(f)
-    
+    # Use cached templates and inject dynamic data
     icon_url = ''
-    if manifest.get('icons'):
-        icon_url = manifest['icons'][0].get('src', '')
-
-    # Inject base href and icon URL
-    head_replacement = f'<head>\n    <base href="{html_base}">' # Note: escaped newline to match corrected_old_string format
-    index_content = index_content.replace('<head>', head_replacement)
-    index_content = index_content.replace('{{ICON_URL}}', icon_url)
+    if manifest_data.get('icons'):
+        icon_url = manifest_data['icons'][0].get('src', '')
     
-    return index_content
+    # Securely inject base href and icon URL
+    base_tag = f'<base href="{escape(html_base)}">' # Note: escaped newline to match corrected_old_string format
+    temp_html = index_template.replace('<head>', f'<head>\n    {base_tag}')
+    final_html = temp_html.replace('{{ICON_URL}}', escape(icon_url))
+    
+    return final_html
 
 @bp.route('/manifest.json')
 def serve_manifest():
-    with open(os.path.join(APP_ROOT, 'manifest.json')) as f:
-        manifest = json.load(f)
-    manifest['start_url'] = html_base
-    return jsonify(manifest)
+    # Use cached manifest and update start_url
+    manifest_copy = manifest_data.copy()
+    manifest_copy['start_url'] = html_base
+    return jsonify(manifest_copy)
 
 @bp.route('/sw.js')
 def serve_sw():
-    with open(os.path.join(APP_ROOT, 'sw.js')) as f:
-        sw_content = f.read()
-    sw_content = sw_content.replace("urlsToCache = ['/']", f"urlsToCache = ['{html_base}']")
+    # Use cached service worker and inject cache URL
+    sw_content = sw_template.replace('{{CACHE_URL}}', html_base)
     return sw_content, 200, {'Content-Type': 'application/javascript'}
 
 @bp.route('/css/<path:path>')
@@ -96,6 +102,7 @@ def send_js(path):
 def favicon():
     return '', 204
 
+# -- API Routes --
 @bp.route('/config')
 def get_config():
     return jsonify(config)
@@ -140,6 +147,7 @@ def proxy():
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
+# -- App Initialization --
 app.register_blueprint(bp, url_prefix=url_prefix)
 
 if __name__ == '__main__':
