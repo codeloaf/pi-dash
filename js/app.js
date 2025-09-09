@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   let refreshIntervalId = null;
+  let appConfig = null; // Store config in memory
 
   async function fetchData(url) {
     const response = await fetch(url);
@@ -41,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  async function updatePiholeUI(pihole) {
-    const section = document.getElementById(`pihole-${pihole.name}-section`);
+  async function updatePiholeUI(piholeName, rawData) {
+    const section = document.getElementById(`pihole-${piholeName}-section`);
     if (!section) return;
 
     const nameEl = section.querySelector('.pihole-name');
@@ -56,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const domainsEl = section.querySelector('.pihole-domains');
 
     try {
-      const rawData = await fetchData(`proxy?name=${pihole.name}`);
       if (rawData.error) throw new Error(rawData.error);
 
       const stats = processSummaryData(rawData);
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rateValue = stats.rate.toFixed(1);
         rateUnit = '/sec';
       }
-      nameEl.innerHTML = `${pihole.name} <span class="text-sm font-normal text-teal-500 dark:text-teal-400">(${rateValue}${rateUnit})</span>`;
+      nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-teal-500 dark:text-teal-400">(${rateValue}${rateUnit})</span>`;
 
       totalEl.textContent = stats.total.toLocaleString();
       blockedEl.textContent = stats.blocked.toLocaleString();
@@ -83,8 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
       statusDotEl.classList.remove('bg-gray-500', 'bg-red-500');
       statusDotEl.classList.add('bg-green-500');
     } catch (error) {
-      console.error(`Failed to update Pi-hole ${pihole.name} data:`, error);
-      nameEl.innerHTML = `${pihole.name} <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(--/sec)</span>`;
+      console.error(`Failed to update Pi-hole ${piholeName} data:`, error);
+      nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(--/sec)</span>`;
       [totalEl, blockedEl, clientsEl, uniqueEl, domainsEl].forEach((el) => (el.textContent = '--'));
       percentEl.textContent = '--%';
       cacheEl.textContent = '-- / --';
@@ -100,21 +100,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function refreshDashboard() {
-    const config = await fetch('config').then((res) => res.json());
-    const enabledPiholes = config.piholes.filter((p) => p.enabled);
-    enabledPiholes.forEach((pihole) => updatePiholeUI(pihole));
-    updateTimestamp();
+    try {
+      const data = await fetchData('data');
+      // Update each Pi-hole with the new data
+      for (const [piholeName, pirholeData] of Object.entries(data)) {
+        await updatePiholeUI(piholeName, pirholeData);
+      }
+      updateTimestamp();
+    } catch (error) {
+      console.error('Failed to refresh dashboard:', error);
+    }
   }
 
   function startTimer() {
-    if (refreshIntervalId) return;
-    fetch('config')
-      .then((res) => res.json())
-      .then((config) => {
-        const interval = config.refresh_interval || 1000;
-        refreshDashboard();
-        refreshIntervalId = setInterval(refreshDashboard, interval);
-      });
+    if (refreshIntervalId || !appConfig) return;
+    const interval = appConfig.refresh_interval || 5000;
+    refreshIntervalId = setInterval(refreshDashboard, interval);
   }
 
   function stopTimer() {
@@ -123,56 +124,71 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function init() {
-    const config = await fetch('config').then((res) => res.json());
-    const mainContent = document.querySelector('main');
-    mainContent.innerHTML = '';
+    try {
+      // Single call to get both config and initial data
+      const initData = await fetchData('init');
+      appConfig = initData.config;
+      
+      const mainContent = document.querySelector('main');
+      mainContent.innerHTML = '';
 
-    const enabledPiholes = config.piholes.filter((p) => p.enabled);
+      const enabledPiholes = appConfig.piholes.filter((p) => p.enabled);
 
-    enabledPiholes.forEach((pihole) => {
-      const section = document.createElement('section');
-      section.id = `pihole-${pihole.name}-section`;
-      section.className = 'bg-white dark:bg-gray-900 p-4 rounded-lg shadow-lg w-full';
-      section.innerHTML = `
-                <div class="flex justify-between items-baseline mb-3">
-                    <h2 class="text-xl font-semibold text-gray-700 dark:text-cyan-400 pihole-name">${pihole.name}</h2>
-                    <span class="status-dot bg-gray-500"></span>
-                </div>
-                <div class="space-y-1.5 text-sm">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Total Queries</span>
-                        <span class="font-medium text-blue-500 dark:text-blue-400 pihole-total">--</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Queries Blocked</span>
-                        <span class="font-medium text-red-500 dark:text-red-400 pihole-blocked">--</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Percent Blocked</span>
-                        <span class="font-medium text-yellow-600 dark:text-yellow-500 pihole-percent">--%</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Cachd / Fwded</span>
-                        <span class="font-medium text-indigo-500 dark:text-indigo-400 pihole-cache">-- / --</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Unique Domains</span>
-                        <span class="font-medium text-orange-500 dark:text-orange-400 pihole-unique">--</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Active Clients</span>
-                        <span class="font-medium text-purple-500 dark:text-purple-400 pihole-clients">--</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500 dark:text-gray-400">Domains on Lists</span>
-                        <span class="font-medium text-green-600 dark:text-green-500 pihole-domains">--</span>
-                    </div>
-                </div>
-            `;
-      mainContent.appendChild(section);
-    });
+      // Create UI elements for each Pi-hole
+      enabledPiholes.forEach((pihole) => {
+        const section = document.createElement('section');
+        section.id = `pihole-${pihole.name}-section`;
+        section.className = 'bg-white dark:bg-gray-900 p-4 rounded-lg shadow-lg w-full';
+        section.innerHTML = `
+                  <div class="flex justify-between items-baseline mb-3">
+                      <h2 class="text-xl font-semibold text-gray-700 dark:text-cyan-400 pihole-name">${pihole.name}</h2>
+                      <span class="status-dot bg-gray-500"></span>
+                  </div>
+                  <div class="space-y-1.5 text-sm">
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Total Queries</span>
+                          <span class="font-medium text-blue-500 dark:text-blue-400 pihole-total">--</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Queries Blocked</span>
+                          <span class="font-medium text-red-500 dark:text-red-400 pihole-blocked">--</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Percent Blocked</span>
+                          <span class="font-medium text-yellow-600 dark:text-yellow-500 pihole-percent">--%</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Cachd / Fwded</span>
+                          <span class="font-medium text-indigo-500 dark:text-indigo-400 pihole-cache">-- / --</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Unique Domains</span>
+                          <span class="font-medium text-orange-500 dark:text-orange-400 pihole-unique">--</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Active Clients</span>
+                          <span class="font-medium text-purple-500 dark:text-purple-400 pihole-clients">--</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-500 dark:text-gray-400">Domains on Lists</span>
+                          <span class="font-medium text-green-600 dark:text-green-500 pihole-domains">--</span>
+                      </div>
+                  </div>
+              `;
+        mainContent.appendChild(section);
+      });
 
-    startTimer();
+      // Update UI with initial data
+      for (const [piholeName, piholeData] of Object.entries(initData.data)) {
+        await updatePiholeUI(piholeName, piholeData);
+      }
+      updateTimestamp();
+
+      // Start refresh timer
+      startTimer();
+    } catch (error) {
+      console.error('Failed to initialize dashboard:', error);
+    }
   }
 
   document.addEventListener('visibilitychange', () => {

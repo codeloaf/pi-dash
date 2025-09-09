@@ -4,7 +4,9 @@ import requests
 from flask_cors import CORS
 import os
 import json
+import concurrent.futures
 
+# Constants
 NO_PASSWORD = "NO_PASSWORD"
 
 app = Flask(__name__)
@@ -108,49 +110,90 @@ def favicon():
     return '', 204
 
 # -- API Routes --
-@bp.route('/config')
-def get_config():
-    return jsonify(config)
+def get_filtered_config():
+    return {
+        "refresh_interval": config.get("refresh_interval", 5000),
+        "piholes": [
+            {
+                "name": pihole["name"],
+                "enabled": pihole["enabled"]
+            }
+            for pihole in config["piholes"]
+            if pihole.get("enabled", True)
+        ]
+    }
+
+def fetch_all_pihole_data():
+    enabled_piholes = [p for p in config['piholes'] if p.get('enabled', True)]
+    results = {}
+    
+    def fetch_single_pihole(pihole_config):
+        name = pihole_config['name']
+        address = pihole_config['address']
+        password = pihole_config['password']
+        
+        # Get or authenticate SID
+        sid = pihole_sessions.get(name)
+        if not sid:
+            sid = authenticate_and_get_sid(address, password)
+            if not sid:
+                return name, {"error": f"Authentication failed for Pi-hole '{name}'"}
+            pihole_sessions[name] = sid
+        
+        try:
+            response = get_pihole_data(address, sid)
+            if response.status_code == 401 and sid != NO_PASSWORD:
+                # Re-authenticate if needed
+                print(f"SID for Pi-hole '{name}' expired. Re-authenticating...")
+                sid = authenticate_and_get_sid(address, password)
+                if not sid:
+                    return name, {"error": f"Re-authentication failed for Pi-hole '{name}'"}
+                pihole_sessions[name] = sid
+                response = get_pihole_data(address, sid)
+            
+            response.raise_for_status()
+            return name, response.json()
+        except requests.exceptions.RequestException as e:
+            return name, {"error": str(e)}
+    
+    # Fetch all Pi-holes in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(enabled_piholes)) as executor:
+        future_to_pihole = {
+            executor.submit(fetch_single_pihole, pihole): pihole 
+            for pihole in enabled_piholes
+        }
+        
+        for future in concurrent.futures.as_completed(future_to_pihole):
+            name, data = future.result()
+            results[name] = data
+    
+    return results
+
+@bp.route('/init')
+def init():
+    try:
+        filtered_config = get_filtered_config()
+        pihole_data = fetch_all_pihole_data()
+        
+        return jsonify({
+            "config": filtered_config,
+            "data": pihole_data
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/data')
+def data():
+    try:
+        pihole_data = fetch_all_pihole_data()
+        return jsonify(pihole_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 def get_pihole_data(address, sid):
     url = f"{address}/api/stats/summary"
     headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
     return requests.get(url, headers=headers, timeout=10, verify=False)
-
-@bp.route('/proxy')
-def proxy():
-    pihole_name = request.args.get('name')
-    if not pihole_name:
-        return jsonify({"error": "Pi-hole name not specified"}), 400
-
-    pihole_config = next((p for p in config['piholes'] if p['name'] == pihole_name and p['enabled']), None)
-    if not pihole_config:
-        return jsonify({"error": f"Pi-hole '{pihole_name}' not found or not enabled"}), 404
-
-    address = pihole_config['address']
-    password = pihole_config['password']
-    sid = pihole_sessions.get(pihole_name)
-
-    if not sid:
-        sid = authenticate_and_get_sid(address, password)
-        if not sid:
-            return jsonify({"error": f"Authentication failed for Pi-hole '{pihole_name}'"}), 500
-        pihole_sessions[pihole_name] = sid
-
-    try:
-        response = get_pihole_data(address, sid)
-        if response.status_code == 401 and sid != NO_PASSWORD:
-            print(f"SID for Pi-hole '{pihole_name}' expired. Re-authenticating...")
-            sid = authenticate_and_get_sid(address, password)
-            if not sid:
-                return jsonify({"error": f"Re-authentication failed for Pi-hole '{pihole_name}'"}), 500
-            pihole_sessions[pihole_name] = sid
-            response = get_pihole_data(address, sid)
-
-        response.raise_for_status()
-        return jsonify(response.json())
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 500
 
 # -- App Initialization --
 app.register_blueprint(bp, url_prefix=url_prefix)
