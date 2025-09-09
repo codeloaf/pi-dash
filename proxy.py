@@ -5,6 +5,8 @@ from flask_cors import CORS
 import os
 import json
 
+NO_PASSWORD = "NO_PASSWORD"
+
 app = Flask(__name__)
 CORS(app)
 
@@ -45,10 +47,13 @@ def authenticate_and_get_sid(address, password):
         response = requests.post(auth_url, json=payload, timeout=10, verify=False)
         if response.status_code == 200:
             data = response.json()
-            new_sid = data.get("session", {}).get("sid")
+            new_sid = data.get("session", {}).get("sid")            
             if new_sid:
                 print(f"Successfully authenticated with {address} and got new SID.")
                 return new_sid
+            elif data.get("session", {}).get("message") == "no password set":
+                print(f"Pi-hole at {address} has no password set.")
+                return NO_PASSWORD
             else:
                 print(f"Authentication with {address} returned 200 OK but no SID found. Response: {data}")
                 return None
@@ -109,7 +114,7 @@ def get_config():
 
 def get_pihole_data(address, sid):
     url = f"{address}/api/stats/summary"
-    headers = {'X-FTL-SID': sid}
+    headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
     return requests.get(url, headers=headers, timeout=10, verify=False)
 
 @bp.route('/proxy')
@@ -134,7 +139,7 @@ def proxy():
 
     try:
         response = get_pihole_data(address, sid)
-        if response.status_code == 401:
+        if response.status_code == 401 and sid != NO_PASSWORD:
             print(f"SID for Pi-hole '{pihole_name}' expired. Re-authenticating...")
             sid = authenticate_and_get_sid(address, password)
             if not sid:
