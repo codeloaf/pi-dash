@@ -123,6 +123,11 @@ def get_filtered_config():
         ]
     }
 
+def get_pihole_data(address, sid):
+    url = f"{address}/api/stats/summary"
+    headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
+    return requests.get(url, headers=headers, timeout=10, verify=False)
+
 def fetch_all_pihole_data():
     enabled_piholes = [p for p in config['piholes'] if p.get('enabled', True)]
     results = {}
@@ -157,7 +162,7 @@ def fetch_all_pihole_data():
             return name, {"error": str(e)}
     
     # Fetch all Pi-holes in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(enabled_piholes)) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(enabled_piholes), 10)) as executor:
         future_to_pihole = {
             executor.submit(fetch_single_pihole, pihole): pihole 
             for pihole in enabled_piholes
@@ -189,11 +194,6 @@ def data():
         return jsonify(pihole_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-def get_pihole_data(address, sid):
-    url = f"{address}/api/stats/summary"
-    headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
-    return requests.get(url, headers=headers, timeout=10, verify=False)
 
 # -- App Initialization --
 app.register_blueprint(bp, url_prefix=url_prefix)

@@ -103,8 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const data = await fetchData('data');
       // Update each Pi-hole with the new data
-      for (const [piholeName, pirholeData] of Object.entries(data)) {
-        await updatePiholeUI(piholeName, pirholeData);
+      for (const [piholeName, piholeData] of Object.entries(data)) {
+        await updatePiholeUI(piholeName, piholeData);
       }
       updateTimestamp();
     } catch (error) {
