@@ -133,6 +133,9 @@ This file is for Progressive Web App (PWA) settings and icon. Example:
 
 Then, open your web browser and navigate to `http://localhost:5001`.
 
+## Credits:
+Initial development of Pi-dash was done by [Codeloaf](https://github.com/codeloaf). It has since been transferred to this repository for ongoing maintenance, as the original author is not currently active on GitHub. 
+
 ## Disclaimer
 
 This project is not associated with the official [Pi-hole](https://pi-hole.net/) project. Pi-hole is a registered trademark of Pi-hole LLC.
