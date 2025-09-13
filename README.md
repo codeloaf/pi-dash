@@ -149,4 +149,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request.
 
 ## Thank You
-If you like my work, or just want to share your wealth with me 😉, you can [buy me a coffee ☕](https://ko-fi.com/skv)
+If you like my work, you can [buy me a coffee ☕](https://ko-fi.com/skv)
