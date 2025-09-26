@@ -36,13 +36,15 @@ This file manages your Pi-hole instances and dashboard settings. Example:
       "name": "Primary",
       "address": "https://pi.hole/one",
       "password": "your_app_password_here",
-      "enabled": true
+      "enabled": true,
+      "link": true
     },
     {
       "name": "Secondary",
       "address": "https://pi.hole/two",
       "password": "your_app_password_here",
-      "enabled": true
+      "enabled": true,
+      "link": false
     }
   ]
 }
@@ -55,6 +57,7 @@ This file manages your Pi-hole instances and dashboard settings. Example:
   - **address**: Full URL to your Pi-hole (e.g., "http://pi.hole").
   - **password**: Your Pi-hole API token/password.
   - **enabled**: Set to `true` to display the Pi-hole on the dashboard, or `false` to hide it.
+  - **link**: (optional, default: `false`) When `true`, the display name becomes a clickable link that opens the Pi-hole admin in a new tab.
 
 ### 2. `manifest.json` (Optional)
 

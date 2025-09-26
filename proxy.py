@@ -111,16 +111,23 @@ def favicon():
 
 # -- API Routes --
 def get_filtered_config():
+    # Only expose minimal fields to frontend. Include address ONLY when link is true.
+    piholes_filtered = []
+    for p in config["piholes"]:
+        if not p.get("enabled", True):
+            continue
+        item = {
+            "name": p["name"],
+            "enabled": p["enabled"],
+            "link": p.get("link", False)
+        }
+        if item["link"]:
+            # address becomes necessary for the anchor tag; safe to include conditionally
+            item["address"] = p["address"]
+        piholes_filtered.append(item)
     return {
         "refresh_interval": config.get("refresh_interval", 5000),
-        "piholes": [
-            {
-                "name": pihole["name"],
-                "enabled": pihole["enabled"]
-            }
-            for pihole in config["piholes"]
-            if pihole.get("enabled", True)
-        ]
+        "piholes": piholes_filtered
     }
 
 def get_pihole_data(address, sid):
