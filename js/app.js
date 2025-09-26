@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!section) return;
 
     const nameEl = section.querySelector('.pihole-name');
+    const rateEl = section.querySelector('.pihole-rate');
     const totalEl = section.querySelector('.pihole-total');
     const blockedEl = section.querySelector('.pihole-blocked');
     const percentEl = section.querySelector('.pihole-percent');
@@ -70,7 +71,14 @@ document.addEventListener('DOMContentLoaded', () => {
         rateValue = stats.rate.toFixed(1);
         rateUnit = '/sec';
       }
-      nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-teal-500 dark:text-teal-400">(${rateValue}${rateUnit})</span>`;
+      if (rateEl) {
+        rateEl.textContent = `(${rateValue}${rateUnit})`;
+        rateEl.classList.remove('text-gray-500', 'dark:text-gray-400');
+        rateEl.classList.add('text-teal-500', 'dark:text-teal-400');
+      } else {
+        // Backward compatibility fallback if not refactored markup present
+        nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-teal-500 dark:text-teal-400">(${rateValue}${rateUnit})</span>`;
+      }
 
       totalEl.textContent = stats.total.toLocaleString();
       blockedEl.textContent = stats.blocked.toLocaleString();
@@ -84,7 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
       statusDotEl.classList.add('bg-green-500');
     } catch (error) {
       console.error(`Failed to update Pi-hole ${piholeName} data:`, error);
-      nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(--/sec)</span>`;
+      if (rateEl) {
+        rateEl.textContent = `(--/sec)`;
+        rateEl.classList.remove('text-teal-500', 'dark:text-teal-400');
+        rateEl.classList.add('text-gray-500', 'dark:text-gray-400');
+      } else {
+        nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-gray-500 dark:text-gray-400">(--/sec)</span>`;
+      }
       [totalEl, blockedEl, clientsEl, uniqueEl, domainsEl].forEach((el) => (el.textContent = '--'));
       percentEl.textContent = '--%';
       cacheEl.textContent = '-- / --';
@@ -139,9 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const section = document.createElement('section');
         section.id = `pihole-${pihole.name}-section`;
         section.className = 'bg-white dark:bg-gray-900 p-4 rounded-lg shadow-lg w-full';
+        // Decide how to render the name: plain text or clickable link
+        const nameContent = pihole.link
+          ? `<a href="${pihole.address}/admin" target="_blank" rel="noopener noreferrer" class="hover:text-teal-500 focus:text-teal-500 outline-none transition-colors" aria-label="Open ${pihole.name} Pi-hole UI">${pihole.name}</a>`
+          : `${pihole.name}`;
         section.innerHTML = `
                   <div class="flex justify-between items-baseline mb-3">
-                      <h2 class="text-xl font-semibold text-gray-700 dark:text-cyan-400 pihole-name">${pihole.name}</h2>
+                      <h2 class="text-xl font-semibold text-gray-700 dark:text-cyan-400 pihole-name">${nameContent} <span class="pihole-rate text-sm font-normal text-gray-500 dark:text-gray-400">(--/sec)</span></h2>
                       <span class="status-dot bg-gray-500"></span>
                   </div>
                   <div class="space-y-1.5 text-sm">
