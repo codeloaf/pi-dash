@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   let refreshIntervalId = null;
   let appConfig = null; // Store config in memory
+  let queryIntervalId = null;
+  let lastDomainsSeen = {}; // Track duplicates per pihole
 
   async function fetchData(url) {
     const response = await fetch(url);
@@ -137,6 +139,71 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshIntervalId = null;
   }
 
+  function stopQueryTimer() {
+    clearInterval(queryIntervalId);
+    queryIntervalId = null;
+  }
+
+  function startQueryTimer() {
+    if (!appConfig || !appConfig.show_background_queries) return;
+    if (queryIntervalId) return;
+    // Use same refresh interval but not more than once per second
+    const interval = Math.max(1000, appConfig.refresh_interval || 5000);
+    queryIntervalId = setInterval(fetchAndRenderQueries, interval);
+  }
+
+  async function fetchAndRenderQueries() {
+    if (document.hidden) return; // Safety
+    try {
+      const data = await fetchData('queries?length=30');
+      renderQueries(data);
+    } catch (e) {
+      // Swallow errors quietly for background feature
+      // console.debug('queries fetch failed', e);
+    }
+  }
+
+  function renderQueries(allQueries) {
+    const container = document.getElementById('background-queries');
+    if (!container) return;
+    const isDark = document.documentElement.classList.contains('dark');
+    container.classList.toggle('dark-mode', isDark);
+
+    // Flatten queries newest last (bottom) by reversing each set so oldest first, then append.
+    const additions = [];
+    Object.entries(allQueries).forEach(([piholeName, queries]) => {
+      if (!Array.isArray(queries)) return;
+      const seenSet = lastDomainsSeen[piholeName] || new Set();
+      for (let i = queries.length - 1; i >= 0; i--) { // oldest first
+        const q = queries[i];
+        const key = q.timestamp + ':' + q.domain + (q.blocked ? ':b' : ':a');
+        if (seenSet.has(key)) continue;
+        seenSet.add(key);
+        // prune seenSet
+        if (seenSet.size > 1000) {
+          const first = seenSet.values().next().value;
+          seenSet.delete(first);
+        }
+        additions.push({ piholeName, ...q });
+      }
+      lastDomainsSeen[piholeName] = seenSet;
+    });
+
+    additions.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'q-row';
+      div.textContent = `[${row.piholeName}] ${row.domain}`;
+      div.style.color = row.blocked ? '#dc2626' : '#16a34a';
+      container.appendChild(div);
+    });
+
+    // Trim from top if exceeding cap
+    const cap = 300;
+    while (container.children.length > cap) {
+      container.removeChild(container.firstChild);
+    }
+  }
+
   async function init() {
     try {
       // Single call to get both config and initial data
@@ -204,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Start refresh timer
       startTimer();
+      startQueryTimer();
     } catch (error) {
       console.error('Failed to initialize dashboard:', error);
     }
@@ -212,8 +280,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopTimer();
+      stopQueryTimer();
     } else {
       startTimer();
+      startQueryTimer();
     }
   });
 

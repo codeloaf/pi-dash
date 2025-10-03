@@ -127,7 +127,8 @@ def get_filtered_config():
         piholes_filtered.append(item)
     return {
         "refresh_interval": config.get("refresh_interval", 5000),
-        "piholes": piholes_filtered
+        "piholes": piholes_filtered,
+        "show_background_queries": config.get("show_background_queries", False)
     }
 
 def get_pihole_data(address, sid):
@@ -181,6 +182,71 @@ def fetch_all_pihole_data():
     
     return results
 
+def fetch_recent_queries(length=50):
+    """Fetch recent queries from all enabled Pi-holes.
+
+    Returns a dict mapping pihole name to list of queries. Each query is
+    represented minimally with keys: domain, status (blocked or allowed)
+    and optionally type/time if available.
+    """
+    enabled_piholes = [p for p in config['piholes'] if p.get('enabled', True)]
+    results = {}
+
+    def fetch_queries_for_pihole(pihole_config):
+        name = pihole_config['name']
+        address = pihole_config['address']
+        password = pihole_config['password']
+
+        sid = pihole_sessions.get(name)
+        if not sid:
+            sid = authenticate_and_get_sid(address, password)
+            if not sid:
+                return name, []
+            pihole_sessions[name] = sid
+        headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
+        url = f"{address}/api/queries?length={length}"
+        try:
+            r = requests.get(url, headers=headers, timeout=10, verify=False)
+            if r.status_code == 401 and sid != NO_PASSWORD:
+                # attempt re-auth
+                sid = authenticate_and_get_sid(address, password)
+                if not sid:
+                    return name, []
+                pihole_sessions[name] = sid
+                headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
+                r = requests.get(url, headers=headers, timeout=10, verify=False)
+            r.raise_for_status()
+            data = r.json()
+            # The queries array is reversed chronological already (most recent first)
+            # Normalize minimal fields for the UI. Pi-hole returns fields like:
+            # "timestamp", "type", "domain", "client", "upstream", "status", "dnssec", "reply"
+            normalized = []
+            for q in data.get('queries', [])[:length]:
+                domain = q.get('domain', '')
+                status = (q.get('status') or '')
+                upstream = (q.get('upstream') or '')
+                reply = (q.get('reply') or '')
+                ts = q.get('timestamp')
+                # Determine blockage: various fields may contain wording
+                lowered = f"{status} {upstream} {reply}".lower()
+                blocked = any(word in lowered for word in ['block', 'gravity', 'regex']) or upstream.lower() == 'blocklist'
+                normalized.append({
+                    'domain': domain,
+                    'blocked': blocked,
+                    'timestamp': ts,
+                    'upstream': upstream
+                })
+            return name, normalized
+        except requests.exceptions.RequestException:
+            return name, []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(enabled_piholes), 10)) as executor:
+        future_to_pihole = {executor.submit(fetch_queries_for_pihole, p): p for p in enabled_piholes}
+        for future in concurrent.futures.as_completed(future_to_pihole):
+            name, data = future.result()
+            results[name] = data
+    return results
+
 @bp.route('/init')
 def init():
     try:
@@ -199,6 +265,16 @@ def data():
     try:
         pihole_data = fetch_all_pihole_data()
         return jsonify(pihole_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/queries')
+def queries():
+    try:
+        length = int(request.args.get('length', 50))
+        length = max(1, min(length, 200))  # clamp
+        queries_data = fetch_recent_queries(length=length)
+        return jsonify(queries_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
