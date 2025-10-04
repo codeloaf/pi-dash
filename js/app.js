@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   let refreshIntervalId = null;
-  let appConfig = null; 
-  let queryIntervalId = null;
+  let appConfig = null;
   let lastDomainsSeen = {}; 
 
   async function fetchData(url) {
@@ -152,18 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshIntervalId = null;
   }
 
-  function stopQueryTimer() {
-    clearInterval(queryIntervalId);
-    queryIntervalId = null;
-  }
-
-  function startQueryTimer() {
-    if (!appConfig || !appConfig.show_queries) return;
-    if (queryIntervalId) return;
-
-  }
-
-
   function renderQueries(allQueries) {
     const container = document.getElementById('background-queries');
     if (!container) return;
@@ -190,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const MAX_ROWS = 100;
-    const MAX_VIEWPORT_FRACTION = 1.0; 
     additions.forEach((row, index) => {
       const li = document.createElement('li');
       li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1 whitespace-nowrap';
@@ -284,9 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       updateTimestamp();
 
-      
       startTimer();
-      startQueryTimer();
     } catch (error) {
       console.error('Failed to initialize dashboard:', error);
     }
@@ -295,10 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopTimer();
-      stopQueryTimer();
     } else {
       startTimer();
-      startQueryTimer();
     }
   });
 

@@ -218,16 +218,24 @@ def fetch_recent_queries(length=50):
             r.raise_for_status()
             data = r.json()
             
+            # Define blocked status codes according to Pi-hole API documentation
+            BLOCKED_STATUSES = {
+                'GRAVITY', 'REGEX', 'DENYLIST', 
+                'EXTERNAL_BLOCKED_IP', 'EXTERNAL_BLOCKED_NULL', 'EXTERNAL_BLOCKED_NXRA',
+                'GRAVITY_CNAME', 'REGEX_CNAME', 'DENYLIST_CNAME',
+                'DBBUSY', 'SPECIAL_DOMAIN', 'EXTERNAL_BLOCKED_EDE15'
+            }
+            
             normalized = []
             for q in data.get('queries', [])[:length]:
                 domain = q.get('domain', '')
-                status = (q.get('status') or '')
-                upstream = (q.get('upstream') or '')
-                reply = (q.get('reply') or '')
+                status = (q.get('status') or '').upper()
                 ts = q.get('timestamp')
+                upstream = q.get('upstream', '')
                 
-                lowered = f"{status} {upstream} {reply}".lower()
-                blocked = any(word in lowered for word in ['block', 'gravity', 'regex']) or upstream.lower() == 'blocklist'
+                # Check if status matches any blocked status
+                blocked = status in BLOCKED_STATUSES
+                
                 normalized.append({
                     'domain': domain,
                     'blocked': blocked,
