@@ -41,8 +41,8 @@ html, body {
     to { opacity:0.9; transform:translateY(0); } 
 }
 
-/* Mobile: adjust container and push cards up when queries visible */
-@media (max-width: 640px) {
+/* Mobile portrait: adjust container and push cards up when queries visible */
+@media (max-width: 640px) and (orientation: portrait) {
     #background-queries { 
         height: 42vh; 
         max-height: 42vh; 
@@ -51,5 +51,31 @@ html, body {
     body:has(#background-queries:not(:empty)) #main-wrapper {
         transform: translateY(-8vh);
         transition: transform 0.3s ease;
+    }
+}
+
+/* Mobile landscape: compact bottom strip, keep cards centered */
+@media (max-width: 896px) and (orientation: landscape) {
+    #background-queries {
+        height: 35vh;
+        max-height: 35vh;
+        font-size: 9px;
+        padding: 2px 4px 6px;
+        line-height: 1.2;
+    }
+    /* Subtle shift up but less than portrait */
+    body:has(#background-queries:not(:empty)) #main-wrapper {
+        transform: translateY(-4vh);
+        transition: transform 0.3s ease;
+    }
+}
+
+/* Tablet landscape: even more compact, cards remain centered */
+@media (min-width: 897px) and (max-width: 1024px) and (orientation: landscape) {
+    #background-queries {
+        height: 28vh;
+        max-height: 28vh;
+        font-size: 9px;
+        padding: 2px 6px 6px;
     }
 }
