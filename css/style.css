@@ -12,7 +12,7 @@ html, body {
     display: inline-block;
 }
 
-/* Background queries region (bottom 60vh) */
+
 #background-queries {
     position: fixed;
     bottom: 0; left: 0; right: 0; top: auto;
@@ -23,15 +23,15 @@ html, body {
     list-style: none; margin: 0; padding: 4px 6px 8px;
     font-family: 'Inter', monospace; font-size: 10px; line-height: 1.25;
     pointer-events: none; overflow: hidden; z-index: 0;
-    /* Fade queries upward via mask gradient (not background) */
+    
     -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%);
     mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%);
-    /* Subtle backdrop blur for depth */
+    
     backdrop-filter: blur(0.5px);
     -webkit-backdrop-filter: blur(0.5px);
 }
 
-/* Enhanced li styling */
+
 #background-queries li {
     text-shadow: 0 1px 2px rgba(0,0,0,0.15);
     letter-spacing: 0.01em;
@@ -41,20 +41,20 @@ html, body {
     to { opacity:0.9; transform:translateY(0); } 
 }
 
-/* Mobile portrait: adjust container and push cards up when queries visible */
+
 @media (max-width: 640px) and (orientation: portrait) {
     #background-queries { 
         height: 42vh; 
         max-height: 42vh; 
     }
-    /* When queries enabled, push main wrapper up slightly for better balance */
+   
     body:has(#background-queries:not(:empty)) #main-wrapper {
         transform: translateY(-8vh);
         transition: transform 0.3s ease;
     }
 }
 
-/* Mobile landscape: compact bottom strip, keep cards centered */
+
 @media (max-width: 896px) and (orientation: landscape) {
     #background-queries {
         height: 35vh;
@@ -63,14 +63,14 @@ html, body {
         padding: 2px 4px 6px;
         line-height: 1.2;
     }
-    /* Subtle shift up but less than portrait */
+    
     body:has(#background-queries:not(:empty)) #main-wrapper {
         transform: translateY(-4vh);
         transition: transform 0.3s ease;
     }
 }
 
-/* Tablet landscape: even more compact, cards remain centered */
+
 @media (min-width: 897px) and (max-width: 1024px) and (orientation: landscape) {
     #background-queries {
         height: 28vh;

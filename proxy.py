@@ -12,10 +12,10 @@ NO_PASSWORD = "NO_PASSWORD"
 app = Flask(__name__)
 CORS(app)
 
-# -- App Setup & Configuration --
+
 APP_ROOT = os.path.dirname(os.path.realpath(__file__))
 
-# Load configurations
+
 with open(os.path.join(APP_ROOT, 'config.json')) as f:
     config = json.load(f)
 
@@ -28,7 +28,7 @@ with open(os.path.join(APP_ROOT, 'index.html')) as f:
 with open(os.path.join(APP_ROOT, 'sw.js')) as f:
     sw_template = f.read()
 
-# Prepare path variables
+
 base_path_config = config.get('base_path', '/')
 url_prefix = base_path_config
 if url_prefix != '/' and url_prefix.endswith('/'):
@@ -41,7 +41,7 @@ if not html_base.endswith('/'):
 bp = Blueprint('pi-dash', __name__)
 pihole_sessions = {}
 
-# -- Pi-hole Authentication --
+
 def authenticate_and_get_sid(address, password):
     auth_url = f"{address}/api/auth"
     payload = {"password": password}
@@ -72,13 +72,13 @@ def authenticate_and_get_sid(address, password):
 # -- Frontend Routes --
 @bp.route('/')
 def index():
-    # Use cached templates and inject dynamic data
+    
     icon_url = ''
     if manifest_data.get('icons'):
         icon_url = manifest_data['icons'][0].get('src', '')
     
-    # Securely inject base href and icon URL
-    base_tag = f'<base href="{escape(html_base)}">' # Inject base tag with escaped HTML to prevent XSS
+    
+    base_tag = f'<base href="{escape(html_base)}">' 
     temp_html = index_template.replace('<head>', f'<head>\n    {base_tag}')
     final_html = temp_html.replace('{{ICON_URL}}', escape(icon_url))
     
@@ -86,14 +86,14 @@ def index():
 
 @bp.route('/manifest.json')
 def serve_manifest():
-    # Use cached manifest and update start_url
+    
     manifest_copy = manifest_data.copy()
     manifest_copy['start_url'] = html_base
     return jsonify(manifest_copy)
 
 @bp.route('/sw.js')
 def serve_sw():
-    # Use cached service worker and inject cache URL
+    
     sw_content = sw_template.replace('{{CACHE_URL}}', html_base)
     return sw_content, 200, {'Content-Type': 'application/javascript'}
 
@@ -111,7 +111,7 @@ def favicon():
 
 # -- API Routes --
 def get_filtered_config():
-    # Only expose minimal fields to frontend. Include address ONLY when link is true.
+    
     piholes_filtered = []
     for p in config["piholes"]:
         if not p.get("enabled", True):
@@ -122,13 +122,13 @@ def get_filtered_config():
             "link": p.get("link", False)
         }
         if item["link"]:
-            # address becomes necessary for the anchor tag; safe to include conditionally
+            
             item["address"] = p["address"]
         piholes_filtered.append(item)
     return {
         "refresh_interval": config.get("refresh_interval", 5000),
         "piholes": piholes_filtered,
-        "show_background_queries": config.get("show_background_queries", False)
+        "show_queries": config.get("show_queries", False)
     }
 
 def get_pihole_data(address, sid):
@@ -145,7 +145,7 @@ def fetch_all_pihole_data():
         address = pihole_config['address']
         password = pihole_config['password']
         
-        # Get or authenticate SID
+        
         sid = pihole_sessions.get(name)
         if not sid:
             sid = authenticate_and_get_sid(address, password)
@@ -156,7 +156,7 @@ def fetch_all_pihole_data():
         try:
             response = get_pihole_data(address, sid)
             if response.status_code == 401 and sid != NO_PASSWORD:
-                # Re-authenticate if needed
+                
                 print(f"SID for Pi-hole '{name}' expired. Re-authenticating...")
                 sid = authenticate_and_get_sid(address, password)
                 if not sid:
@@ -169,7 +169,7 @@ def fetch_all_pihole_data():
         except requests.exceptions.RequestException as e:
             return name, {"error": str(e)}
     
-    # Fetch all Pi-holes in parallel
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(enabled_piholes), 10)) as executor:
         future_to_pihole = {
             executor.submit(fetch_single_pihole, pihole): pihole 
@@ -217,9 +217,7 @@ def fetch_recent_queries(length=50):
                 r = requests.get(url, headers=headers, timeout=10, verify=False)
             r.raise_for_status()
             data = r.json()
-            # The queries array is reversed chronological already (most recent first)
-            # Normalize minimal fields for the UI. Pi-hole returns fields like:
-            # "timestamp", "type", "domain", "client", "upstream", "status", "dnssec", "reply"
+            
             normalized = []
             for q in data.get('queries', [])[:length]:
                 domain = q.get('domain', '')
@@ -227,7 +225,7 @@ def fetch_recent_queries(length=50):
                 upstream = (q.get('upstream') or '')
                 reply = (q.get('reply') or '')
                 ts = q.get('timestamp')
-                # Determine blockage: various fields may contain wording
+                
                 lowered = f"{status} {upstream} {reply}".lower()
                 blocked = any(word in lowered for word in ['block', 'gravity', 'regex']) or upstream.lower() == 'blocklist'
                 normalized.append({
@@ -265,7 +263,7 @@ def data():
     try:
         pihole_data = fetch_all_pihole_data()
         
-        # Conditionally include queries if requested (when feature enabled)
+        
         include_queries = request.args.get('include_queries', 'false').lower() == 'true'
         if include_queries:
             length = int(request.args.get('length', 30))
@@ -290,7 +288,7 @@ def queries():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -- App Initialization --
+
 app.register_blueprint(bp, url_prefix=url_prefix)
 
 if __name__ == '__main__':

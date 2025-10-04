@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   let refreshIntervalId = null;
-  let appConfig = null; // Store config in memory
+  let appConfig = null; 
   let queryIntervalId = null;
-  let lastDomainsSeen = {}; // Track duplicates per pihole
+  let lastDomainsSeen = {}; 
 
   async function fetchData(url) {
     const response = await fetch(url);
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rateEl.classList.remove('text-gray-500', 'dark:text-gray-400');
         rateEl.classList.add('text-teal-500', 'dark:text-teal-400');
       } else {
-        // Backward compatibility fallback if not refactored markup present
+        
         nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-teal-500 dark:text-teal-400">(${rateValue}${rateUnit})</span>`;
       }
 
@@ -117,22 +117,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function refreshDashboard() {
     try {
-      // Conditionally merge queries into data call if feature enabled
-      const includeQueries = appConfig && appConfig.show_background_queries;
+      
+      const includeQueries = appConfig && appConfig.show_queries;
       const endpoint = includeQueries ? 'data?include_queries=true&length=30' : 'data';
       const data = await fetchData(endpoint);
       
-      // Handle merged response format
+      
       const statsData = data.stats || data;
       const queriesData = data.queries;
       
-      // Update each Pi-hole with the stats data
+      
       for (const [piholeName, piholeData] of Object.entries(statsData)) {
         await updatePiholeUI(piholeName, piholeData);
       }
       updateTimestamp();
       
-      // If queries were included, render them
+      
       if (queriesData) {
         renderQueries(queriesData);
       }
@@ -158,15 +158,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startQueryTimer() {
-    if (!appConfig || !appConfig.show_background_queries) return;
+    if (!appConfig || !appConfig.show_queries) return;
     if (queryIntervalId) return;
-    // Queries now fetched with /data, so no separate timer needed
-    // This function retained for compatibility but does nothing
+
   }
 
   async function fetchAndRenderQueries() {
-    // Deprecated: queries now fetched with main data endpoint
-    // Retained for compatibility
+
   }
 
   function renderQueries(allQueries) {
@@ -175,9 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDark = document.documentElement.classList.contains('dark');
     container.classList.toggle('dark-mode', isDark);
 
-    // No offset calculation needed now that the container is placed in-flow for mobile
-
-    // Flatten queries newest last (bottom) by reversing each set so oldest first, then append.
     const additions = [];
     Object.entries(allQueries).forEach(([piholeName, queries]) => {
       if (!Array.isArray(queries)) return;
@@ -198,15 +193,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const MAX_ROWS = 150;
-    const MAX_VIEWPORT_FRACTION = 1.0; // container already limited to 60/42vh via CSS
+    const MAX_VIEWPORT_FRACTION = 1.0; 
     additions.forEach((row, index) => {
       const li = document.createElement('li');
-      // Tailwind classes: small, transition, fade-in (custom anim via inline)
+
       li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1 whitespace-nowrap';
       li.style.textOverflow = 'ellipsis';
       li.textContent = `[${row.piholeName}] ${row.domain}`;
       
-      // Enhanced color styling with subtle glow
+
       if (row.blocked) {
         li.classList.add('text-red-600', 'dark:text-red-500');
         li.style.filter = 'drop-shadow(0 0 2px rgba(220, 38, 38, 0.3))';
@@ -215,8 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
         li.style.filter = 'drop-shadow(0 0 2px rgba(22, 163, 74, 0.25))';
       }
       
-      // Staggered fade-in animation for smoother visual flow
-      const delay = Math.min(index * 15, 300); // max 300ms delay for batch
+
+      const delay = Math.min(index * 15, 300); 
       setTimeout(() => {
         requestAnimationFrame(() => {
           li.style.transition = 'opacity .3s ease, transform .3s ease';
@@ -225,13 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }, delay);
       
-      container.appendChild(li);        // Trim by count
+      container.appendChild(li);        
         while (container.children.length > MAX_ROWS) {
           container.removeChild(container.firstChild);
         }
 
-        // Trim by height relative to viewport (not container because it fills viewport) to keep within 60%
-    const maxPixel = container.clientHeight * MAX_VIEWPORT_FRACTION;
+        
         if (container.scrollHeight > maxPixel) {
           let safety = 0;
           while (container.scrollHeight > maxPixel && container.firstChild && safety < 400) {
@@ -241,14 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-    // Trim by count first (hard cap) then by pixel height so we never overdraw to top of view
-    // Final safety (should rarely trigger) ensure rows <= MAX_ROWS
+
     while (container.children.length > MAX_ROWS) container.removeChild(container.firstChild);
   }
 
   async function init() {
     try {
-      // Single call to get both config and initial data
+      
       const initData = await fetchData('init');
       appConfig = initData.config;
       
@@ -257,12 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const enabledPiholes = appConfig.piholes.filter((p) => p.enabled);
 
-      // Create UI elements for each Pi-hole
+      
       enabledPiholes.forEach((pihole) => {
         const section = document.createElement('section');
         section.id = `pihole-${pihole.name}-section`;
         section.className = 'bg-white dark:bg-gray-900 p-4 rounded-lg shadow-lg w-full';
-        // Decide how to render the name: plain text or clickable link
+        
         const nameContent = pihole.link
           ? `<a href="${pihole.address}/admin" target="_blank" rel="noopener noreferrer" class="hover:text-teal-500 focus:text-teal-500 outline-none transition-colors" aria-label="Open ${pihole.name} Pi-hole UI">${pihole.name}</a>`
           : `${pihole.name}`;
@@ -305,13 +298,13 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContent.appendChild(section);
       });
 
-      // Update UI with initial data
+      
       for (const [piholeName, piholeData] of Object.entries(initData.data)) {
         await updatePiholeUI(piholeName, piholeData);
       }
       updateTimestamp();
 
-      // Start refresh timer
+      
       startTimer();
       startQueryTimer();
     } catch (error) {

@@ -31,7 +31,7 @@ This file manages your Pi-hole instances and dashboard settings. Example:
 {
   "base_path": "/",
   "refresh_interval": 1000,
-  "show_background_queries": false,
+  "show_queries": false,
   "piholes": [
     {
       "name": "Primary",
@@ -53,7 +53,7 @@ This file manages your Pi-hole instances and dashboard settings. Example:
 
 - **base_path**: (optional) The subpath where the application is hosted (e.g., `/pi-dash/`). Defaults to `/`.
 - **refresh_interval**: (optional) How often the dashboard updates, in milliseconds (e.g., 1000 = 1 second).
-- **show_background_queries**: (optional, default: `false`) When set to `true`, a subtle scrolling feed of recent DNS queries will appear from the bottom of the screen. Blocked domains are shown in red, allowed in green. It pauses when the tab is inactive.
+- **show_queries**: (optional, default: `false`) When set to `true`, a subtle scrolling feed of recent DNS queries will appear from the bottom of the screen. Blocked domains are shown in red, allowed in green.
 - **piholes**: List of Pi-hole instances.
   - **name**: Display name for your Pi-hole (e.g., "Primary").
   - **address**: Full URL to your Pi-hole (e.g., "http://pi.hole").
