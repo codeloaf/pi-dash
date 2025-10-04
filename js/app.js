@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lastDomainsSeen[piholeName] = seenSet;
     });
 
-    const MAX_ROWS = 150;
+    const MAX_ROWS = 100;
     const MAX_VIEWPORT_FRACTION = 1.0; 
     additions.forEach((row, index) => {
       const li = document.createElement('li');
