@@ -117,12 +117,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function refreshDashboard() {
     try {
-      const data = await fetchData('data');
-      // Update each Pi-hole with the new data
-      for (const [piholeName, piholeData] of Object.entries(data)) {
+      // Conditionally merge queries into data call if feature enabled
+      const includeQueries = appConfig && appConfig.show_background_queries;
+      const endpoint = includeQueries ? 'data?include_queries=true&length=30' : 'data';
+      const data = await fetchData(endpoint);
+      
+      // Handle merged response format
+      const statsData = data.stats || data;
+      const queriesData = data.queries;
+      
+      // Update each Pi-hole with the stats data
+      for (const [piholeName, piholeData] of Object.entries(statsData)) {
         await updatePiholeUI(piholeName, piholeData);
       }
       updateTimestamp();
+      
+      // If queries were included, render them
+      if (queriesData) {
+        renderQueries(queriesData);
+      }
     } catch (error) {
       console.error('Failed to refresh dashboard:', error);
     }
@@ -147,20 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function startQueryTimer() {
     if (!appConfig || !appConfig.show_background_queries) return;
     if (queryIntervalId) return;
-    // Use same refresh interval but not more than once per second
-    const interval = Math.max(1000, appConfig.refresh_interval || 5000);
-    queryIntervalId = setInterval(fetchAndRenderQueries, interval);
+    // Queries now fetched with /data, so no separate timer needed
+    // This function retained for compatibility but does nothing
   }
 
   async function fetchAndRenderQueries() {
-    if (document.hidden) return; // Safety
-    try {
-      const data = await fetchData('queries?length=30');
-      renderQueries(data);
-    } catch (e) {
-      // Swallow errors quietly for background feature
-      // console.debug('queries fetch failed', e);
-    }
+    // Deprecated: queries now fetched with main data endpoint
+    // Retained for compatibility
   }
 
   function renderQueries(allQueries) {
@@ -191,23 +197,35 @@ document.addEventListener('DOMContentLoaded', () => {
       lastDomainsSeen[piholeName] = seenSet;
     });
 
-      const MAX_ROWS = 150;
+    const MAX_ROWS = 150;
     const MAX_VIEWPORT_FRACTION = 1.0; // container already limited to 60/42vh via CSS
-      additions.forEach(row => {
-        const li = document.createElement('li');
-        // Tailwind classes: small, transition, fade-in (custom anim via inline)
-        li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1';
-        li.textContent = `[${row.piholeName}] ${row.domain}`;
-        li.classList.add(row.blocked ? 'text-red-600' : 'text-green-600');
-        // Inline animation using requestAnimationFrame for Tailwind-like utility
+    additions.forEach((row, index) => {
+      const li = document.createElement('li');
+      // Tailwind classes: small, transition, fade-in (custom anim via inline)
+      li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1 whitespace-nowrap';
+      li.style.textOverflow = 'ellipsis';
+      li.textContent = `[${row.piholeName}] ${row.domain}`;
+      
+      // Enhanced color styling with subtle glow
+      if (row.blocked) {
+        li.classList.add('text-red-600', 'dark:text-red-500');
+        li.style.filter = 'drop-shadow(0 0 2px rgba(220, 38, 38, 0.3))';
+      } else {
+        li.classList.add('text-green-600', 'dark:text-green-500');
+        li.style.filter = 'drop-shadow(0 0 2px rgba(22, 163, 74, 0.25))';
+      }
+      
+      // Staggered fade-in animation for smoother visual flow
+      const delay = Math.min(index * 15, 300); // max 300ms delay for batch
+      setTimeout(() => {
         requestAnimationFrame(() => {
-          li.style.transition = 'opacity .25s ease, transform .25s ease';
+          li.style.transition = 'opacity .3s ease, transform .3s ease';
           li.style.opacity = '0.9';
           li.style.transform = 'translateY(0)';
         });
-        container.appendChild(li);
-
-        // Trim by count
+      }, delay);
+      
+      container.appendChild(li);        // Trim by count
         while (container.children.length > MAX_ROWS) {
           container.removeChild(container.firstChild);
         }

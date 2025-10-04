@@ -264,6 +264,18 @@ def init():
 def data():
     try:
         pihole_data = fetch_all_pihole_data()
+        
+        # Conditionally include queries if requested (when feature enabled)
+        include_queries = request.args.get('include_queries', 'false').lower() == 'true'
+        if include_queries:
+            length = int(request.args.get('length', 30))
+            length = max(1, min(length, 200))
+            queries_data = fetch_recent_queries(length=length)
+            return jsonify({
+                "stats": pihole_data,
+                "queries": queries_data
+            })
+        
         return jsonify(pihole_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
