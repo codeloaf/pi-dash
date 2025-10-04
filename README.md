@@ -19,6 +19,9 @@ Pi-Dash is a simple, lightweight dashboard for monitoring multiple Pi-hole insta
 
 ![pi-dash-landscape](https://github.com/user-attachments/assets/a0e1fbef-279a-40df-9424-0cad50c31b50)
 
+
+<img width="2481" height="1477" alt="Screenshot 2025-10-04 114711" src="https://github.com/user-attachments/assets/e160cb8d-8dd9-49ac-801a-a95a34c254f7" />
+
 ## Configuration
 
 Before running the application, you need to create and configure the following files:
