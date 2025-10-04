@@ -169,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDark = document.documentElement.classList.contains('dark');
     container.classList.toggle('dark-mode', isDark);
 
+    // No offset calculation needed now that the container is placed in-flow for mobile
+
     // Flatten queries newest last (bottom) by reversing each set so oldest first, then append.
     const additions = [];
     Object.entries(allQueries).forEach(([piholeName, queries]) => {
@@ -189,19 +191,41 @@ document.addEventListener('DOMContentLoaded', () => {
       lastDomainsSeen[piholeName] = seenSet;
     });
 
-    additions.forEach(row => {
-      const div = document.createElement('div');
-      div.className = 'q-row';
-      div.textContent = `[${row.piholeName}] ${row.domain}`;
-      div.style.color = row.blocked ? '#dc2626' : '#16a34a';
-      container.appendChild(div);
-    });
+      const MAX_ROWS = 150;
+    const MAX_VIEWPORT_FRACTION = 1.0; // container already limited to 60/42vh via CSS
+      additions.forEach(row => {
+        const li = document.createElement('li');
+        // Tailwind classes: small, transition, fade-in (custom anim via inline)
+        li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1';
+        li.textContent = `[${row.piholeName}] ${row.domain}`;
+        li.classList.add(row.blocked ? 'text-red-600' : 'text-green-600');
+        // Inline animation using requestAnimationFrame for Tailwind-like utility
+        requestAnimationFrame(() => {
+          li.style.transition = 'opacity .25s ease, transform .25s ease';
+          li.style.opacity = '0.9';
+          li.style.transform = 'translateY(0)';
+        });
+        container.appendChild(li);
 
-    // Trim from top if exceeding cap
-    const cap = 300;
-    while (container.children.length > cap) {
-      container.removeChild(container.firstChild);
-    }
+        // Trim by count
+        while (container.children.length > MAX_ROWS) {
+          container.removeChild(container.firstChild);
+        }
+
+        // Trim by height relative to viewport (not container because it fills viewport) to keep within 60%
+    const maxPixel = container.clientHeight * MAX_VIEWPORT_FRACTION;
+        if (container.scrollHeight > maxPixel) {
+          let safety = 0;
+          while (container.scrollHeight > maxPixel && container.firstChild && safety < 400) {
+            container.removeChild(container.firstChild);
+            safety++;
+          }
+        }
+      });
+
+    // Trim by count first (hard cap) then by pixel height so we never overdraw to top of view
+    // Final safety (should rarely trigger) ensure rows <= MAX_ROWS
+    while (container.children.length > MAX_ROWS) container.removeChild(container.firstChild);
   }
 
   async function init() {

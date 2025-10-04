@@ -12,51 +12,25 @@ html, body {
     display: inline-block;
 }
 
-/* Background queries: chat style list pinned behind content */
+/* Background queries region (bottom 60vh) */
 #background-queries {
     position: fixed;
-    inset: 0 0 0 0; /* full screen */
-    pointer-events: none;
-    font-size: 10px;
-    line-height: 1.2;
-    font-family: 'Inter', monospace;
-    padding: 0.25rem 0.5rem 0.5rem 0.5rem;
-    z-index: 0; /* Behind main container */
+    bottom: 0; left: 0; right: 0; top: auto;
+    height: 60vh; max-height: 60vh;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Bottom align */
-    gap: 2px;
+    justify-content: flex-end;
+    list-style: none; margin: 0; padding: 4px 6px 8px;
+    font-family: 'Inter', monospace; font-size: 10px; line-height: 1.25;
+    pointer-events: none; overflow: hidden; z-index: 0;
+    /* Fade queries upward via mask gradient (not background) */
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%);
+    mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.5) 80%, rgba(0,0,0,0) 100%);
 }
 
-#background-queries::after { /* subtle top fade */
-    content: '';
-    position: absolute;
-    left: 0; right:0; top:0; height: 60px;
-    background: linear-gradient(var(--bg-col, rgba(249,250,251,0.9)), rgba(249,250,251,0));
-    pointer-events: none;
-}
-.dark #background-queries::after {
-    --bg-col: rgba(17,24,39,0.9);
-}
+@keyframes bqFadeIn { to { opacity:0.9; transform:translateY(0); } }
 
-#background-queries.dark-mode { opacity: 0.55; }
-
-#background-queries .q-row { 
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0; 
-    transform: translateY(4px);
-    animation: fadeInRow 0.4s ease forwards;
-}
-
-@keyframes fadeInRow {
-    to { opacity: 0.85; transform: translateY(0); }
-}
-
+/* Mobile: slightly reduce vertical fade dominance */
 @media (max-width: 640px) {
-  #background-queries {
-    padding-top: 200px; /* leave room so text begins below cards */
-  }
-  #background-queries::after { height: 20px; }
+    #background-queries { height: 42vh; max-height: 42vh; }
 }
