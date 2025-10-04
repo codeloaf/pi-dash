@@ -163,9 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   }
 
-  async function fetchAndRenderQueries() {
-
-  }
 
   function renderQueries(allQueries) {
     const container = document.getElementById('background-queries');
@@ -196,12 +193,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_VIEWPORT_FRACTION = 1.0; 
     additions.forEach((row, index) => {
       const li = document.createElement('li');
-
       li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1 whitespace-nowrap';
       li.style.textOverflow = 'ellipsis';
       li.textContent = `[${row.piholeName}] ${row.domain}`;
-      
-
       if (row.blocked) {
         li.classList.add('text-red-600', 'dark:text-red-500');
         li.style.filter = 'drop-shadow(0 0 2px rgba(220, 38, 38, 0.3))';
@@ -209,8 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
         li.classList.add('text-green-600', 'dark:text-green-500');
         li.style.filter = 'drop-shadow(0 0 2px rgba(22, 163, 74, 0.25))';
       }
-      
-
       const delay = Math.min(index * 15, 300); 
       setTimeout(() => {
         requestAnimationFrame(() => {
@@ -219,24 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
           li.style.transform = 'translateY(0)';
         });
       }, delay);
-      
-      container.appendChild(li);        
-        while (container.children.length > MAX_ROWS) {
-          container.removeChild(container.firstChild);
-        }
-
-        
-        if (container.scrollHeight > maxPixel) {
-          let safety = 0;
-          while (container.scrollHeight > maxPixel && container.firstChild && safety < 400) {
-            container.removeChild(container.firstChild);
-            safety++;
-          }
-        }
-      });
-
-
-    while (container.children.length > MAX_ROWS) container.removeChild(container.firstChild);
+      container.appendChild(li);
+    });
+    // Cleanup: keep only MAX_ROWS most recent
+    while (container.children.length > MAX_ROWS) {
+      container.removeChild(container.firstChild);
+    }
   }
 
   async function init() {
