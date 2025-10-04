@@ -1,0 +1,11 @@
+{
+  "name": "pi-dash",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^3.3.0"
+  },
+  "scripts": {
+    "build:css": "npx tailwindcss -c tailwind.config.js -i ./src/tailwind.css -o ./css/style.css --minify"
+  }
+}

@@ -22,6 +22,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Install Node.js and build Tailwind CSS
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Build Tailwind CSS
+        run: npm run build:css
+
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ghcr.io

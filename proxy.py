@@ -12,10 +12,10 @@ NO_PASSWORD = "NO_PASSWORD"
 app = Flask(__name__)
 CORS(app)
 
-# -- App Setup & Configuration --
+
 APP_ROOT = os.path.dirname(os.path.realpath(__file__))
 
-# Load configurations
+
 with open(os.path.join(APP_ROOT, 'config.json')) as f:
     config = json.load(f)
 
@@ -28,7 +28,7 @@ with open(os.path.join(APP_ROOT, 'index.html')) as f:
 with open(os.path.join(APP_ROOT, 'sw.js')) as f:
     sw_template = f.read()
 
-# Prepare path variables
+
 base_path_config = config.get('base_path', '/')
 url_prefix = base_path_config
 if url_prefix != '/' and url_prefix.endswith('/'):
@@ -41,7 +41,7 @@ if not html_base.endswith('/'):
 bp = Blueprint('pi-dash', __name__)
 pihole_sessions = {}
 
-# -- Pi-hole Authentication --
+
 def authenticate_and_get_sid(address, password):
     auth_url = f"{address}/api/auth"
     payload = {"password": password}
@@ -72,13 +72,13 @@ def authenticate_and_get_sid(address, password):
 # -- Frontend Routes --
 @bp.route('/')
 def index():
-    # Use cached templates and inject dynamic data
+    
     icon_url = ''
     if manifest_data.get('icons'):
         icon_url = manifest_data['icons'][0].get('src', '')
     
-    # Securely inject base href and icon URL
-    base_tag = f'<base href="{escape(html_base)}">' # Inject base tag with escaped HTML to prevent XSS
+    
+    base_tag = f'<base href="{escape(html_base)}">' 
     temp_html = index_template.replace('<head>', f'<head>\n    {base_tag}')
     final_html = temp_html.replace('{{ICON_URL}}', escape(icon_url))
     
@@ -86,14 +86,14 @@ def index():
 
 @bp.route('/manifest.json')
 def serve_manifest():
-    # Use cached manifest and update start_url
+    
     manifest_copy = manifest_data.copy()
     manifest_copy['start_url'] = html_base
     return jsonify(manifest_copy)
 
 @bp.route('/sw.js')
 def serve_sw():
-    # Use cached service worker and inject cache URL
+    
     sw_content = sw_template.replace('{{CACHE_URL}}', html_base)
     return sw_content, 200, {'Content-Type': 'application/javascript'}
 
@@ -111,7 +111,7 @@ def favicon():
 
 # -- API Routes --
 def get_filtered_config():
-    # Only expose minimal fields to frontend. Include address ONLY when link is true.
+    
     piholes_filtered = []
     for p in config["piholes"]:
         if not p.get("enabled", True):
@@ -122,12 +122,13 @@ def get_filtered_config():
             "link": p.get("link", False)
         }
         if item["link"]:
-            # address becomes necessary for the anchor tag; safe to include conditionally
+            
             item["address"] = p["address"]
         piholes_filtered.append(item)
     return {
         "refresh_interval": config.get("refresh_interval", 5000),
-        "piholes": piholes_filtered
+        "piholes": piholes_filtered,
+        "show_queries": config.get("show_queries", False)
     }
 
 def get_pihole_data(address, sid):
@@ -144,7 +145,7 @@ def fetch_all_pihole_data():
         address = pihole_config['address']
         password = pihole_config['password']
         
-        # Get or authenticate SID
+        
         sid = pihole_sessions.get(name)
         if not sid:
             sid = authenticate_and_get_sid(address, password)
@@ -155,7 +156,7 @@ def fetch_all_pihole_data():
         try:
             response = get_pihole_data(address, sid)
             if response.status_code == 401 and sid != NO_PASSWORD:
-                # Re-authenticate if needed
+                
                 print(f"SID for Pi-hole '{name}' expired. Re-authenticating...")
                 sid = authenticate_and_get_sid(address, password)
                 if not sid:
@@ -168,7 +169,7 @@ def fetch_all_pihole_data():
         except requests.exceptions.RequestException as e:
             return name, {"error": str(e)}
     
-    # Fetch all Pi-holes in parallel
+    
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(enabled_piholes), 10)) as executor:
         future_to_pihole = {
             executor.submit(fetch_single_pihole, pihole): pihole 
@@ -179,6 +180,77 @@ def fetch_all_pihole_data():
             name, data = future.result()
             results[name] = data
     
+    return results
+
+def fetch_recent_queries(length=50):
+    """Fetch recent queries from all enabled Pi-holes.
+
+    Returns a dict mapping pihole name to list of queries. Each query is
+    represented minimally with keys: domain, status (blocked or allowed)
+    and optionally type/time if available.
+    """
+    enabled_piholes = [p for p in config['piholes'] if p.get('enabled', True)]
+    results = {}
+
+    def fetch_queries_for_pihole(pihole_config):
+        name = pihole_config['name']
+        address = pihole_config['address']
+        password = pihole_config['password']
+
+        sid = pihole_sessions.get(name)
+        if not sid:
+            sid = authenticate_and_get_sid(address, password)
+            if not sid:
+                return name, []
+            pihole_sessions[name] = sid
+        headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
+        url = f"{address}/api/queries?length={length}"
+        try:
+            r = requests.get(url, headers=headers, timeout=10, verify=False)
+            if r.status_code == 401 and sid != NO_PASSWORD:
+                # attempt re-auth
+                sid = authenticate_and_get_sid(address, password)
+                if not sid:
+                    return name, []
+                pihole_sessions[name] = sid
+                headers = {} if sid == NO_PASSWORD else {'X-FTL-SID': sid}
+                r = requests.get(url, headers=headers, timeout=10, verify=False)
+            r.raise_for_status()
+            data = r.json()
+            
+            # Define blocked status codes according to Pi-hole API documentation
+            BLOCKED_STATUSES = {
+                'GRAVITY', 'REGEX', 'DENYLIST', 
+                'EXTERNAL_BLOCKED_IP', 'EXTERNAL_BLOCKED_NULL', 'EXTERNAL_BLOCKED_NXRA',
+                'GRAVITY_CNAME', 'REGEX_CNAME', 'DENYLIST_CNAME',
+                'DBBUSY', 'SPECIAL_DOMAIN', 'EXTERNAL_BLOCKED_EDE15'
+            }
+            
+            normalized = []
+            for q in data.get('queries', [])[:length]:
+                domain = q.get('domain', '')
+                status = (q.get('status') or '').upper()
+                ts = q.get('timestamp')
+                upstream = q.get('upstream', '')
+                
+                # Check if status matches any blocked status
+                blocked = status in BLOCKED_STATUSES
+                
+                normalized.append({
+                    'domain': domain,
+                    'blocked': blocked,
+                    'timestamp': ts,
+                    'upstream': upstream
+                })
+            return name, normalized
+        except requests.exceptions.RequestException:
+            return name, []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(enabled_piholes), 10)) as executor:
+        future_to_pihole = {executor.submit(fetch_queries_for_pihole, p): p for p in enabled_piholes}
+        for future in concurrent.futures.as_completed(future_to_pihole):
+            name, data = future.result()
+            results[name] = data
     return results
 
 @bp.route('/init')
@@ -198,11 +270,33 @@ def init():
 def data():
     try:
         pihole_data = fetch_all_pihole_data()
+        
+        
+        include_queries = request.args.get('include_queries', 'false').lower() == 'true'
+        if include_queries:
+            length = int(request.args.get('length', 30))
+            length = max(1, min(length, 200))
+            queries_data = fetch_recent_queries(length=length)
+            return jsonify({
+                "stats": pihole_data,
+                "queries": queries_data
+            })
+        
         return jsonify(pihole_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -- App Initialization --
+@bp.route('/queries')
+def queries():
+    try:
+        length = int(request.args.get('length', 50))
+        length = max(1, min(length, 200))  # clamp
+        queries_data = fetch_recent_queries(length=length)
+        return jsonify(queries_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 app.register_blueprint(bp, url_prefix=url_prefix)
 
 if __name__ == '__main__':

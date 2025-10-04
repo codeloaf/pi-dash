@@ -9,7 +9,7 @@
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" id="theme-color-meta" content="#1f2937" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS is now built locally and included below -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
 
@@ -28,7 +28,7 @@
   </head>
   <body
     class="h-full flex items-center justify-center p-4 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 transition-colors duration-300">
-    <div class="w-full max-w-sm sm:max-w-xl mx-auto">
+  <div id="main-wrapper" class="w-full max-w-sm sm:max-w-xl mx-auto relative z-10">
       <header class="text-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Pi-Dash</h1>
         <p id="last-updated" class="text-xs text-gray-500 dark:text-gray-400">Last updated: Never</p>
@@ -36,6 +36,8 @@
 
       <main class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4"></main>
     </div>
+
+  <ul id="background-queries" aria-hidden="true"></ul>
 
     <script src="js/app.js"></script>
   </body>

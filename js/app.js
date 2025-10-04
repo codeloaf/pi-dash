@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   let refreshIntervalId = null;
-  let appConfig = null; // Store config in memory
+  let appConfig = null;
+  let lastDomainsSeen = {}; 
 
   async function fetchData(url) {
     const response = await fetch(url);
@@ -76,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rateEl.classList.remove('text-gray-500', 'dark:text-gray-400');
         rateEl.classList.add('text-teal-500', 'dark:text-teal-400');
       } else {
-        // Backward compatibility fallback if not refactored markup present
+        
         nameEl.innerHTML = `${piholeName} <span class="text-sm font-normal text-teal-500 dark:text-teal-400">(${rateValue}${rateUnit})</span>`;
       }
 
@@ -115,12 +116,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function refreshDashboard() {
     try {
-      const data = await fetchData('data');
-      // Update each Pi-hole with the new data
-      for (const [piholeName, piholeData] of Object.entries(data)) {
+      
+      const includeQueries = appConfig && appConfig.show_queries;
+      const endpoint = includeQueries ? 'data?include_queries=true&length=30' : 'data';
+      const data = await fetchData(endpoint);
+      
+      
+      const statsData = data.stats || data;
+      const queriesData = data.queries;
+      
+      
+      for (const [piholeName, piholeData] of Object.entries(statsData)) {
         await updatePiholeUI(piholeName, piholeData);
       }
       updateTimestamp();
+      
+      
+      if (queriesData) {
+        renderQueries(queriesData);
+      }
     } catch (error) {
       console.error('Failed to refresh dashboard:', error);
     }
@@ -137,9 +151,63 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshIntervalId = null;
   }
 
+  function renderQueries(allQueries) {
+    const container = document.getElementById('background-queries');
+    if (!container) return;
+    const isDark = document.documentElement.classList.contains('dark');
+    container.classList.toggle('dark-mode', isDark);
+
+    const additions = [];
+    Object.entries(allQueries).forEach(([piholeName, queries]) => {
+      if (!Array.isArray(queries)) return;
+      const seenSet = lastDomainsSeen[piholeName] || new Set();
+      for (let i = queries.length - 1; i >= 0; i--) { // oldest first
+        const q = queries[i];
+        const key = q.timestamp + ':' + q.domain + (q.blocked ? ':b' : ':a');
+        if (seenSet.has(key)) continue;
+        seenSet.add(key);
+        // prune seenSet
+        if (seenSet.size > 1000) {
+          const first = seenSet.values().next().value;
+          seenSet.delete(first);
+        }
+        additions.push({ piholeName, ...q });
+      }
+      lastDomainsSeen[piholeName] = seenSet;
+    });
+
+    const MAX_ROWS = 100;
+    additions.forEach((row, index) => {
+      const li = document.createElement('li');
+      li.className = 'opacity-0 translate-y-1 text-[10px] leading-tight px-1 whitespace-nowrap';
+      li.style.textOverflow = 'ellipsis';
+      li.textContent = `[${row.piholeName}] ${row.domain}`;
+      if (row.blocked) {
+        li.classList.add('text-red-600', 'dark:text-red-500');
+        li.style.filter = 'drop-shadow(0 0 2px rgba(220, 38, 38, 0.3))';
+      } else {
+        li.classList.add('text-green-600', 'dark:text-green-500');
+        li.style.filter = 'drop-shadow(0 0 2px rgba(22, 163, 74, 0.25))';
+      }
+      const delay = Math.min(index * 15, 300); 
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          li.style.transition = 'opacity .3s ease, transform .3s ease';
+          li.style.opacity = '0.9';
+          li.style.transform = 'translateY(0)';
+        });
+      }, delay);
+      container.appendChild(li);
+    });
+    // Cleanup: keep only MAX_ROWS most recent
+    while (container.children.length > MAX_ROWS) {
+      container.removeChild(container.firstChild);
+    }
+  }
+
   async function init() {
     try {
-      // Single call to get both config and initial data
+      
       const initData = await fetchData('init');
       appConfig = initData.config;
       
@@ -148,12 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const enabledPiholes = appConfig.piholes.filter((p) => p.enabled);
 
-      // Create UI elements for each Pi-hole
+      
       enabledPiholes.forEach((pihole) => {
         const section = document.createElement('section');
         section.id = `pihole-${pihole.name}-section`;
         section.className = 'bg-white dark:bg-gray-900 p-4 rounded-lg shadow-lg w-full';
-        // Decide how to render the name: plain text or clickable link
+        
         const nameContent = pihole.link
           ? `<a href="${pihole.address}/admin" target="_blank" rel="noopener noreferrer" class="hover:text-teal-500 focus:text-teal-500 outline-none transition-colors" aria-label="Open ${pihole.name} Pi-hole UI">${pihole.name}</a>`
           : `${pihole.name}`;
@@ -196,13 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContent.appendChild(section);
       });
 
-      // Update UI with initial data
+      
       for (const [piholeName, piholeData] of Object.entries(initData.data)) {
         await updatePiholeUI(piholeName, piholeData);
       }
       updateTimestamp();
 
-      // Start refresh timer
       startTimer();
     } catch (error) {
       console.error('Failed to initialize dashboard:', error);

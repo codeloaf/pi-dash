@@ -1,6 +1,7 @@
 {
   "base_path": "/",
   "refresh_interval": 1000,
+  "show_queries": false,
   "piholes": [
     {
       "name": "Primary",
