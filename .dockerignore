@@ -3,3 +3,14 @@ README.md
 .github/
 Dockerfile
 .gitignore
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.log
+dist/
+src/
+.vscode/
+.DS_Store
